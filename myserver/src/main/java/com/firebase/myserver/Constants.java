@@ -7,4 +7,5 @@ public class Constants {
     public static final String MESSAGING_SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
     public static final String[] SCOPES = { MESSAGING_SCOPE };
     public static final String MESSAGE_KEY = "message";
+    public static final String FCM_JSON_PATH = "/fir-practice-7ae2d-firebase-adminsdk-ogel7-7b3f9214b8.json";
 }
