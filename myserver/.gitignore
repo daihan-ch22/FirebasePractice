@@ -4,7 +4,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-/fir-practice-7ae2d-firebase-adminsdk-ogel7-7b3f9214b8.json
+/src/main/resources/fir-practice-7ae2d-firebase-adminsdk-ogel7-7b3f9214b8.json
 
 ### STS ###
 .apt_generated

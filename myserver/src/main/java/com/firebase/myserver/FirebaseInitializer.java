@@ -1,40 +1,40 @@
 package com.firebase.myserver;
 
-import com.google.api.client.util.Value;
+import com.firebase.myserver.common.Constants;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-import com.google.firebase.messaging.FirebaseMessaging;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.logging.Log;
-import org.slf4j.Logger;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 
 import javax.annotation.PostConstruct;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 
 @Configuration
 @Slf4j
-public class FirebaseInitializer{
+public class FirebaseInitializer {
+
+    private final ResourceLoader resourceLoader;
+
+    public FirebaseInitializer(ResourceLoader resourceLoader) {
+        this.resourceLoader = resourceLoader;
+    }
 
     @PostConstruct
-    public FirebaseApp firebaseAppInit() throws IOException{
+    public FirebaseApp firebaseAppInit() throws IOException {
+        log.debug("Firebase init...");
 
-        log.debug("firebase init......");
-        FileInputStream serviceAccount =
-                new FileInputStream("fir-practice-7ae2d-firebase-adminsdk-ogel7-7b3f9214b8.json");
-
-        log.debug("serviceAccount = " + serviceAccount);
+        Resource resource = resourceLoader.getResource("classpath:" + Constants.FCM_JSON_PATH);
+        InputStream serviceAccountStream = resource.getInputStream();
 
         FirebaseOptions options = new FirebaseOptions.Builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                .setCredentials(GoogleCredentials.fromStream(serviceAccountStream))
                 .build();
-
-        log.debug("options = " + options);
 
         return FirebaseApp.initializeApp(options);
     }
+
 }
