@@ -25,7 +25,7 @@ public class FirebaseInitializer {
 
     @PostConstruct
     public FirebaseApp firebaseAppInit() throws IOException {
-        log.debug("Firebase init...");
+        log.debug("== Firebase init start ==");
 
         Resource resource = resourceLoader.getResource("classpath:" + Constants.FCM_JSON_PATH);
         InputStream serviceAccountStream = resource.getInputStream();
@@ -34,6 +34,7 @@ public class FirebaseInitializer {
                 .setCredentials(GoogleCredentials.fromStream(serviceAccountStream))
                 .build();
 
+        log.debug("== Firebase init finished ==");
         return FirebaseApp.initializeApp(options);
     }
 
