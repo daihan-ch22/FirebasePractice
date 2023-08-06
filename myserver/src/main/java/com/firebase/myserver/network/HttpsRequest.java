@@ -1,7 +1,12 @@
 package com.firebase.myserver.network;
 
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.firebase.database.annotations.NotNull;
 import com.google.firebase.messaging.Message;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 
 import javax.net.ssl.*;
 import java.io.DataOutputStream;
@@ -13,7 +18,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
+
+import static com.firebase.myserver.common.Constants.FCM_JSON_PATH;
+import static com.firebase.myserver.common.Constants.SCOPES;
 
 @Slf4j
 public class HttpsRequest {
@@ -35,13 +44,14 @@ public class HttpsRequest {
         String POST = "POST";
     }
 
-    public void requestHttpsConnection(String methods, String targetUrl, Map<String, String> propertyMap, Map<String, String> params) {
-        requestConnection(getConnection(methods, targetUrl, propertyMap, params));
+    public void requestHttpsConnection(String methods, String targetUrl, Map<String, String> params) {
+        requestConnection(getConnection(methods, targetUrl, params));
     }
 
     private void requestConnection(HttpsURLConnection conn) {
 
         try {
+            conn.connect();
             DataOutputStream wr = new DataOutputStream(conn.getOutputStream());
             wr.write(firebaseMessage.getBytes("UTF-8"));
             wr.flush();
@@ -64,7 +74,6 @@ public class HttpsRequest {
 
     private HttpsURLConnection getConnection(String methods,
                                              String targetUrl,
-                                             Map<String, String> propertyMap,
                                              Map<String, String> params
     ) {
 
@@ -75,14 +84,14 @@ public class HttpsRequest {
         HostnameVerifier hostnameVerifier = getHostNameVerifier();
 
         try {
-
             url = new URL(paramSet(targetUrl, params));
             conn = (HttpsURLConnection) url.openConnection();
-            propertySet(conn, propertyMap);
             conn.setDoInput(true);
             conn.setDoOutput(true);
-            conn.setHostnameVerifier(hostnameVerifier);
-            conn.setSSLSocketFactory(sslSocketFactory);
+            conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
+            conn.setRequestProperty("Content-Type","application/json; UTF-8" );
+            //conn.setHostnameVerifier(hostnameVerifier);
+            //conn.setSSLSocketFactory(sslSocketFactory);
             conn.setConnectTimeout(30000);
             conn.setReadTimeout(30000);
             conn.setRequestMethod(methods);
@@ -91,6 +100,22 @@ public class HttpsRequest {
             e.printStackTrace();
         }
         return conn;
+    }
+
+    private String getAccessToken() {
+        GoogleCredentials googleCredential = null;
+        try {
+            googleCredential = GoogleCredentials
+                    .fromStream(new ClassPathResource(FCM_JSON_PATH).getInputStream())
+                    .createScoped(SCOPES);
+            googleCredential.refreshIfExpired();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        @NotNull AccessToken token = googleCredential.getAccessToken();
+        log.debug("FCM TOKEN = " + token);
+        return token.getTokenValue();
     }
 
     private void propertySet(HttpsURLConnection conn, Map<String, String> propertyMap) {
