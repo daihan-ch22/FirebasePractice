@@ -17,12 +17,7 @@ import static com.firebase.myserver.common.Constants.*;
 
 @Slf4j
 @Service
-@NoArgsConstructor
 public class NotiService implements HttpRequestCallBack {
-
-    FirebaseApp firebaseApp;
-
-
 
     @Transactional
     public void sendMessage(JsonObject fcmMessage) {
@@ -38,6 +33,11 @@ public class NotiService implements HttpRequestCallBack {
                 .build();
 
 
+        String data =
+                "{\n" + "\"message\":{\n" + " \"notification\": {\n" + " \"title\":" + title+ ",\n"
+                        + " \"body\": \"" + body + "\",\n"
+                        + "  },\n" + " \"token\": \"" + DEVICE_TOKEN + "\"\n" + "  }\n" + "}\n";
+
         // option 1 이거는 되는데 HttpUrlConnection 방식은 JSON형식의 문제인듯
         /*try {
             String send = FirebaseMessaging.getInstance().send(message);
@@ -46,11 +46,11 @@ public class NotiService implements HttpRequestCallBack {
             e.printStackTrace();
         }*/
 
-        String jsonMessage = new Gson().toJson(message).toString();
-        log.error(jsonMessage);
+
+        log.error(data);
 
 
-        HttpsRequest request = new HttpsRequest(this, jsonMessage);
+        HttpsRequest request = new HttpsRequest(this, data);
         request.requestHttpsConnection(HttpsRequest.HttpMethods.POST, stringUrl, new HashMap<>());
     }
 

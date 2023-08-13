@@ -3,22 +3,14 @@ package com.firebase.myserver.network;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.database.annotations.NotNull;
-import com.google.firebase.messaging.Message;
-import jakarta.transaction.Transactional;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 
 import javax.net.ssl.*;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.Map;
 
 import static com.firebase.myserver.common.Constants.FCM_JSON_PATH;
@@ -29,10 +21,7 @@ public class HttpsRequest {
 
     private HttpRequestCallBack mCallBack;
     private String firebaseMessage;
-
-    public HttpsRequest(HttpRequestCallBack mCallBack) {
-        this.mCallBack = mCallBack;
-    }
+    private String jsonData;
 
     public HttpsRequest(HttpRequestCallBack mCallBack, String firebaseMessage) {
         this.mCallBack = mCallBack;
@@ -44,30 +33,58 @@ public class HttpsRequest {
         String POST = "POST";
     }
 
-    public void requestHttpsConnection(String methods, String targetUrl, Map<String, String> params) {
-        requestConnection(getConnection(methods, targetUrl, params));
+    public void requestHttpsConnection(String method, String targetUrl, Map<String, String> params) {
+        requestConnection(getConnection(method, targetUrl, params), method);
     }
 
-    private void requestConnection(HttpsURLConnection conn) {
+    private void requestConnection(HttpsURLConnection conn, String method) {
+
+        String result = "";
+        int responseCode = 0;
+        String responseMessage = "";
 
         try {
-            conn.connect();
-            DataOutputStream wr = new DataOutputStream(conn.getOutputStream());
-            wr.write(firebaseMessage.getBytes("UTF-8"));
-            wr.flush();
-            wr.close();
 
-            int responseCode = conn.getResponseCode();
+            //connect()가 필요한 메서드 getOutputStream(), getInputStream()을 사용하면
+            //connect()가 없어도 암묵적으로 통신을 연결한다.
+            conn.connect();
+
+            //POST인 경우 바디에 데이터 넣고 json으로 쏜다
+            if(method.equals(HttpMethods.POST)){
+                OutputStream os = conn.getOutputStream();
+                //byte[] inputData = jsonData.getBytes(StandardCharsets.UTF_8);
+                byte[] data = firebaseMessage.getBytes(StandardCharsets.UTF_8);
+                os.write(data, 0, data.length);
+                os.flush();
+                os.close();
+            }
+
+            responseCode = conn.getResponseCode();
+            responseMessage = conn.getResponseMessage();
+
+            if(responseCode == HttpsURLConnection.HTTP_OK) {
+                //응답 데이터 읽어온다
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String receivedData = null;
+                while ((receivedData = br.readLine()) != null) {
+                    response.append(receivedData.trim());
+                }
+                //응답 데이터
+                result = response.toString();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        } finally {
             if (responseCode == HttpsURLConnection.HTTP_OK) {
                 // Handle success
                 log.debug("SUCCESS CB!");
             } else {
                 // Handle failure
                 log.error("FAILURE CB! === " + responseCode);
-                log.error("FAILURE CB! === " + conn.getResponseMessage());
+                log.error("FAILURE CB! === " + responseMessage);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -78,20 +95,27 @@ public class HttpsRequest {
     ) {
 
         HttpsURLConnection conn = null;
-        URL url = null;
-
-        SSLSocketFactory sslSocketFactory = getSSLSocketFactory();
-        HostnameVerifier hostnameVerifier = getHostNameVerifier();
 
         try {
-            url = new URL(paramSet(targetUrl, params));
+
+            URL url = new URL(targetUrl);
+            if(methods.equals(HttpMethods.GET)) {
+                //GET인경우 params를 url뒤에 쿼리스트링으로 붙인다.
+                url = new URL(paramSet(targetUrl, params));
+            }else if(methods.equals(HttpMethods.POST)){
+                //POST일경우 params를 json형식으로 변경한다.
+                setJsonData(params);
+            }
+
+            //connection 설정값
             conn = (HttpsURLConnection) url.openConnection();
             conn.setDoInput(true);
             conn.setDoOutput(true);
             conn.setRequestProperty("Authorization", "Bearer " + getAccessToken());
-            conn.setRequestProperty("Content-Type","application/json; UTF-8" );
-            //conn.setHostnameVerifier(hostnameVerifier);
-            //conn.setSSLSocketFactory(sslSocketFactory);
+            conn.setRequestProperty("Content-Type","application/json; charset=utf-8");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setHostnameVerifier(SslUtil.getHostNameVerifier());
+            conn.setSSLSocketFactory(SslUtil.getSSLSocketFactory());
             conn.setConnectTimeout(30000);
             conn.setReadTimeout(30000);
             conn.setRequestMethod(methods);
@@ -118,12 +142,9 @@ public class HttpsRequest {
         return token.getTokenValue();
     }
 
-    private void propertySet(HttpsURLConnection conn, Map<String, String> propertyMap) {
-        if (propertyMap != null || propertyMap.size() != 0) {
-            for (String key : propertyMap.keySet()) {
-                conn.setRequestProperty(key, propertyMap.get(key));
-            }
-        }
+    private void setJsonData(Map<String, String> params) {
+        Gson gson = new Gson();
+        jsonData = gson.toJson(params);
     }
 
     private String paramSet(String targetUrl, Map<String, String> params) {
@@ -141,43 +162,5 @@ public class HttpsRequest {
             }
         }
         return builder.toString();
-    }
-
-    private SSLSocketFactory getSSLSocketFactory() {
-
-        SSLContext sslContext = null;
-        SSLSocketFactory sslSocketFactory = null;
-
-        TrustManager[] certs = new TrustManager[]{new X509TrustManager() {
-            @Override
-            public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-            }
-
-            @Override
-            public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-            }
-
-            @Override
-            public X509Certificate[] getAcceptedIssuers() {
-                return new X509Certificate[0];
-            }
-        }};
-        try {
-            sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, certs, new SecureRandom());
-            sslSocketFactory = sslContext.getSocketFactory();
-        } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            e.printStackTrace();
-        }
-        return sslSocketFactory;
-    }
-
-    private HostnameVerifier getHostNameVerifier() {
-        return new HostnameVerifier() {
-            @Override
-            public boolean verify(String s, SSLSession sslSession) {
-                return true; //일단 그냥 통과
-            }
-        };
     }
 }
