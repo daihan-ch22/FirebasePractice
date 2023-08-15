@@ -7,6 +7,8 @@ import androidx.annotation.NonNull;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import java.util.Map;
+
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     @Override
@@ -18,6 +20,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(@NonNull RemoteMessage message) {
         super.onMessageReceived(message);
-        Log.e("FCM", "Message : " + message.getData().toString());
+
+        String title = message.getNotification().getTitle();
+        String body  = message.getNotification().getBody();
+
+        Log.e("FCM", "Message : " + title + " " + body);
     }
 }

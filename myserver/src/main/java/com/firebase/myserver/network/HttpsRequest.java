@@ -5,6 +5,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.database.annotations.NotNull;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.client.HttpResponseException;
 import org.springframework.core.io.ClassPathResource;
 
 import javax.net.ssl.*;
@@ -33,11 +34,11 @@ public class HttpsRequest {
         String POST = "POST";
     }
 
-    public void requestHttpsConnection(String method, String targetUrl, Map<String, String> params) {
+    public void requestHttpsConnection(String method, String targetUrl, Map<String, String> params) throws HttpResponseException {
         requestConnection(getConnection(method, targetUrl, params), method);
     }
 
-    private void requestConnection(HttpsURLConnection conn, String method) {
+    private void requestConnection(HttpsURLConnection conn, String method) throws HttpResponseException {
 
         String result = "";
         int responseCode = 0;
@@ -72,18 +73,23 @@ public class HttpsRequest {
                 }
                 //응답 데이터
                 result = response.toString();
+                log.debug("connection result : " + result);
             }
         } catch (Exception e) {
             e.printStackTrace();
 
         } finally {
+
+            //통신 결과에 맞춰 NotiService의 콜백함수 실행
             if (responseCode == HttpsURLConnection.HTTP_OK) {
                 // Handle success
-                log.debug("SUCCESS CB!");
+                log.debug("Connection Successful");
+                mCallBack.onSuccess();
             } else {
                 // Handle failure
-                log.error("FAILURE CB! === " + responseCode);
-                log.error("FAILURE CB! === " + responseMessage);
+                log.error("Connection Failure === " + responseCode);
+                log.error("Connection Failure === " + responseMessage);
+                mCallBack.onFailure(responseCode, responseMessage);
             }
         }
     }
