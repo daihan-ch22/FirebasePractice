@@ -25,5 +25,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String body  = message.getNotification().getBody();
 
         Log.e("FCM", "Message : " + title + " " + body);
+
+        NotificationUtil notificationUtil = new NotificationUtil(getApplicationContext());
+        notificationUtil.createNotificationContent(title, body);
+        notificationUtil.createNotificationChannel();
+
     }
 }

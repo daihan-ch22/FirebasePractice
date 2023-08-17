@@ -25,6 +25,7 @@
             </intent-filter>
         </activity>
 
+        <!-- FCM setting -->
         <service
             android:name=".MyFirebaseMessagingService"
             android:exported="false">

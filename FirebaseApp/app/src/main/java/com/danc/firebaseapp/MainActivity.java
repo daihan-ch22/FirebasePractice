@@ -19,7 +19,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initFCMToken();
+        if(getPermission()) {
+            initFCMToken();
+        }
+    }
+
+    private boolean getPermission(){
+        //TODO permission
+        return true;
     }
 
 
