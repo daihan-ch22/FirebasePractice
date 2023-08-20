@@ -1,8 +1,11 @@
 package com.danc.firebaseapp;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.Manifest;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
@@ -14,19 +17,27 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 
 public class MainActivity extends AppCompatActivity {
 
+    private ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if(isGranted){
+                    initFCMToken();
+                }else {
+                    Toast.makeText(this, "권한 허용해주세요", Toast.LENGTH_SHORT).show();
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if(getPermission()) {
-            initFCMToken();
-        }
+        getPermission();
+
     }
 
-    private boolean getPermission(){
+    private void getPermission(){
         //TODO permission
-        return true;
+        requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
     }
 
 

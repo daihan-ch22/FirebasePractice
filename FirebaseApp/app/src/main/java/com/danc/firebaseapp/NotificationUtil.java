@@ -1,5 +1,6 @@
 package com.danc.firebaseapp;
 
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -12,13 +13,18 @@ import androidx.core.app.NotificationCompat;
 public class NotificationUtil {
 
     private Context context;
+    private String title;
+    private String body;
     private int PENDING_INTENT_REQUEST_CODE = 0;
+    private int NOTIFICATION_ID = 0;
 
-    public NotificationUtil(Context context) {
+    public NotificationUtil(Context context, String title, String body) {
         this.context = context;
+        this.title = title;
+        this.body = body;
     }
 
-    public void createNotificationContent(String notiTitle, String notiMessage){
+    public Notification getNotification(){
 
         //Click Action
         Intent intent = new Intent(context, MainActivity.class);
@@ -27,11 +33,14 @@ public class NotificationUtil {
 
 
         NotificationCompat.Builder notiBuilder = new NotificationCompat.Builder(context, Common.NOTIFICATION_CHANNEL_ID)
-                .setContentTitle(notiTitle)
-                .setContentText(notiMessage)
+                .setContentTitle(title)
+                .setContentText(body)
                 .setContentIntent(pendingIntent)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true);
+
+        return notiBuilder.build();
     }
 
     public void createNotificationChannel(){
@@ -51,6 +60,7 @@ public class NotificationUtil {
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager notiManager = context.getSystemService(NotificationManager.class);
             notiManager.createNotificationChannel(channel);
+            notiManager.notify(NOTIFICATION_ID++, getNotification());
         }
     }
 }

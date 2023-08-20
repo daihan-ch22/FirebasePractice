@@ -26,8 +26,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         Log.e("FCM", "Message : " + title + " " + body);
 
-        NotificationUtil notificationUtil = new NotificationUtil(getApplicationContext());
-        notificationUtil.createNotificationContent(title, body);
+        NotificationUtil notificationUtil = new NotificationUtil(getApplicationContext(), title, body);
         notificationUtil.createNotificationChannel();
 
     }
